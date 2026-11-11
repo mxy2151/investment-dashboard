@@ -53,6 +53,7 @@ td input{width:96px;text-align:right}
 .note{font-size:13px;color:var(--mu)}
 h2{font-size:15px;margin:0 0 10px}
 .empty{padding:18px 0;text-align:center;color:var(--mu)}
+.sugw{position:relative}.sug{position:absolute;left:0;top:100%;z-index:5;min-width:310px;background:var(--card);border:1px solid var(--bd);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18)}.sug:empty{display:none}.opt{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--bd);padding:9px 12px;font:inherit;color:var(--tx);cursor:pointer}.opt:last-child{border:0}button.opt:hover{background:var(--bg)}
 </style>
 </head>
 <body>
@@ -102,13 +103,13 @@ function setField(id,f,v){var n=parseFloat(v);if(n>=0){S.items.forEach(function(
 function del(id){S.items=S.items.filter(function(i){return i.id!==id});save();render()}
 function g(id){return document.getElementById(id).value}
 function addItem(cat){
-var m=g("f-m"),name=g("f-n").trim(),q=parseFloat(g("f-q")),c=cat==="cash"?1:parseFloat(g("f-c")),p=0;
+var sel=(cat==="stock"&&pick&&g("f-n").trim()===pick.symbol)?pick:null,m=g("f-m"),name=g("f-n").trim(),q=parseFloat(g("f-q")),c=cat==="cash"?1:parseFloat(g("f-c")),p=0;
 if(cat==="stock"||cat==="gold_etf"){cat=g("f-t");p=parseFloat(g("f-p"))||0}
 if(!name||!(q>=0)||!(c>=0)||(cat!=="gold"&&cat!=="cash"&&!(p>=0))){alert("Fill in every field with valid numbers.");return}
 if(S.sample){S.items=[];S.sample=false}
-S.items.push({id:S.next++,market:m,cat:cat,name:name,qty:q,cost:c,price:cat==="cash"?1:p});save();render();refresh()}
+S.items.push({id:S.next++,co:sel?sel.name:"",market:sel?sel.market:m,cat:cat,name:name,qty:q,cost:c,price:cat==="cash"?1:p});save();render();refresh()}
 function clearSample(){S.items=[];S.sample=false;save();render()}
-function mSel(){var d=view==="AU"?"AU":"IN";return'<select id="f-m"><option value="IN"'+(d==="IN"?" selected":"")+'>India</option><option value="AU"'+(d==="AU"?" selected":"")+">Australia</option></select>"}
+function mSel(){var d=view==="AU"?"AU":"IN";return'<select id="f-m"><option value="IN"'+(d==="IN"?" selected":"")+' >India</option><option value="AU"'+(d==="AU"?" selected":"")+">Australia</option></select>"}
 function donut(list){
 var cats={Stocks:0,Gold:0,Cash:0},t=target(),tot=0;
 list.forEach(function(i){var v=conv(val(i),CUR[i.market],t);cats[catOf(i)]+=v;tot+=v});
@@ -120,7 +121,7 @@ return'<div class="donut"><svg width="150" height="150" viewBox="0 0 120 120" ro
 function overview(){
 var L=S.items.filter(inView),t=target(),v=sum(L,val),c=sum(L.filter(function(i){return i.cat!=="cash"}),cost),
 nv=sum(L.filter(function(i){return i.cat!=="cash"}),val),d=nv-c,h='';
-h+='<div class="card"><div class="mu">'+(view==="ALL"?"Combined portfolio":view==="IN"?"India portfolio":"Australia portfolio")+" value</div><div class=\"big\">"+money(v,t)+'</div><div class="stats"><div><span>Invested (excl. cash)</span>'+money(c,t)+'</div><div><span>Profit / loss</span><b class="'+(d>=0?"up":"dn")+'">'+money(d,t)+" ("+pct(c?d/c*100:0)+')</b></div><div><span>Holdings</span>'+L.length+"</div></div></div>";
+h+='<div class="card"><div class="mu">'+(view==="ALL"?"Combined portfolio":view==="IN"?"India portfolio":"Australia portfolio")+' value</div><div class=\"big\">'+money(v,t)+'</div><div class="stats"><div><span>Invested (excl. cash)</span>'+money(c,t)+'</div><div><span>Profit / loss</span><b class="'+(d>=0?"up":"dn")+'">'+money(d,t)+" ("+pct(c?d/c*100:0)+')</b></div><div><span>Holdings</span>'+L.length+"</div></div></div>";
 if(view==="ALL"){var iv=sum(S.items.filter(function(i){return i.market==="IN"}),val),av=sum(S.items.filter(function(i){return i.market==="AU"}),val);
 h+='<div class="grid"><div class="card"><div class="mu">'+tag("IN")+'India</div><div class="big" style="font-size:24px">'+money(iv,t)+'</div></div><div class="card"><div class="mu">'+tag("AU")+'Australia</div><div class="big" style="font-size:24px">'+money(av,t)+"</div></div></div>"}
 h+='<div class="card"><h2>Allocation</h2>'+donut(L)+"</div>";
@@ -131,13 +132,13 @@ if(!list.length)return'<div class="empty">Nothing here yet. Add your first entry
 var h='<div class="scroll"><table><thead><tr>';
 h+=kind==="cash"?"<th>Account</th><th>Balance</th><th></th>":"<th>"+(kind==="gold"?"Item":"Name")+"</th><th>"+(kind==="gold"?"Grams":"Qty")+"</th><th>Avg cost</th><th>"+(kind==="gold"?"Rate/g":"Price")+"</th><th>Value</th><th>Profit / loss</th><th></th>";
 h+="</tr></thead><tbody>";
-list.forEach(function(i){var c=CUR[i.market],n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"");
-if(kind==="cash")h+="<tr><td>"+n+'</td><td><input type="number" min="0" value="'+i.qty+'" onchange="setField('+i.id+",'qty',this.value)\" aria-label=\"Balance\"> "+c+'</td><td><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td></tr>';
+list.forEach(function(i){var c=CUR[i.market],n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"")+(i.co?'<div class="mu" style="font-size:12px;font-weight:400">'+esc(i.co)+"</div>":"");
+if(kind==="cash")h+="<tr><td>"+n+' </td><td><input type="number" min="0" value="'+i.qty+'" onchange="setField('+i.id+",'qty',this.value)\" aria-label=\"Balance\"> "+c+'</td><td><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td></tr>';
 else h+="<tr><td>"+n+"</td><td>"+i.qty+"</td><td>"+money(i.cost,c,2)+"</td><td>"+(i.cat==="gold"?money(price(i),c,2):'<input type="number" min="0" step="0.01" value="'+i.price+'" onchange="setField('+i.id+",'price',this.value)\" aria-label=\"Price\">")+"</td><td>"+money(val(i),c)+"</td><td>"+plCell(i)+'</td><td><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td></tr>'});
-return h+="</tbody></table></div>"}
+return h+"</tbody></table></div>"}
 function stocks(){
 var L=S.items.filter(function(i){return inView(i)&&(i.cat==="stock"||i.cat==="gold_etf")});
-return'<div class="card"><h2>Stocks and gold ETFs</h2>'+table(L,"stock")+'</div><div class="card"><h2>Add a holding</h2><div class="form">'+mSel()+'<select id="f-t"><option value="stock">Stock</option><option value="gold_etf">Gold ETF</option></select><input class="nm" id="f-n" placeholder="Symbol, e.g. INFY"><input id="f-q" type="number" min="0" placeholder="Quantity"><input id="f-c" type="number" min="0" step="0.01" placeholder="Avg buy price"><input id="f-p" type="number" min="0" step="0.01" placeholder="Price (auto-filled)"><button class="btn" onclick="addItem(\'stock\')">Add holding</button></div><p class="note">Prices refresh every minute. NSE symbols work as typed (RELIANCE). For BSE add .BO (TCS.BO). ASX symbols work as typed (CBA).</p></div>'}
+return'<div class="card"><h2>Stocks and gold ETFs</h2>'+table(L,"stock")+'</div><div class="card"><h2>Add a holding</h2><div class="form">'+mSel()+'<select id="f-t"><option value="stock">Stock</option><option value="gold_etf">Gold ETF</option></select><div class="sugw"><input class="nm" id="f-n" placeholder="Search company or symbol" autocomplete="off" oninput="srch(this.value)" style="width:230px"><div id="sug" class="sug"></div></div><input id="f-q" type="number" min="0" placeholder="Quantity"><input id="f-c" type="number" min="0" step="0.01" placeholder="Avg buy price"><input id="f-p" type="number" min="0" step="0.01" placeholder="Price (auto-filled)"><button class="btn" onclick="addItem(\'stock\')">Add holding</button></div><p class="note">Type a company name, pick it from the list, then enter your quantity and average buy price. The current price fills in by itself and refreshes every minute.</p></div>"}
 function gold(){
 var L=S.items.filter(function(i){return inView(i)&&i.cat==="gold"}),E=S.items.filter(function(i){return inView(i)&&i.cat==="gold_etf"});
 var h='<div class="card"><h2>Gold rate per gram</h2><div class="form"><label>India (INR) <input type="number" min="0" value="'+S.goldRate.IN+'" onchange="setGold(\'IN\',this.value)"></label><label>Australia (AUD) <input type="number" min="0" value="'+S.goldRate.AU+'" onchange="setGold(\'AU\',this.value)"></label></div><div class="form" style="margin-top:10px"><label>India adjustment % <input type="number" step="0.1" value="'+S.adj.IN+'" onchange="setAdj(\'IN\',this.value)"></label><label>Australia adjustment % <input type="number" step="0.1" value="'+S.adj.AU+'" onchange="setAdj(\'AU\',this.value)"></label></div><p class="note">The rate updates live from the international gold price. Use the adjustment to add import duty, GST or dealer premium so it matches what you would actually get.</p></div>';
@@ -154,6 +155,14 @@ document.getElementById("tabs").innerHTML=T.map(function(v){return'<button class
 document.getElementById("bar").innerHTML='<label>1 AUD = <input type="number" min="0" step="0.01" value="'+S.fx+'" onchange="setFx(this.value)"> INR</label>'+'<button class="btn" onclick="refresh()">Refresh prices</button><span>'+esc(stat)+"</span>"+(view==="ALL"?'<label>Show combined in <select onchange="setBase(this.value)"><option'+(S.base==="INR"?" selected":"")+'>INR</option><option'+(S.base==="AUD"?" selected":"")+">AUD</option></select></label>":"");
 document.getElementById("main").innerHTML=tab==="overview"?overview():tab==="stocks"?stocks():tab==="gold"?gold():cash();
 document.getElementById("foot").textContent="Your holdings are saved in this browser only. Prices are from Yahoo Finance and can be delayed."}
+var pick=null,stm=null,res=[];
+function srch(v){pick=null;clearTimeout(stm);var box=document.getElementById("sug");
+if(v.trim().length<2){box.innerHTML="";return}
+stm=setTimeout(async function(){try{
+var r=await fetch("/api/search?q="+encodeURIComponent(v.trim()));var d=await r.json();res=d.results||[];
+box.innerHTML=res.length?res.map(function(x,k){return'<button type="button" class="opt" onclick="choose('+k+')">'+esc(x.name)+' <span class="mu">'+esc(x.symbol)+"</span>"+tag(x.market)+"</button>"}).join(""):'<div class="opt mu">'+(d.error?"Search unavailable ("+esc(d.error)+"). Type the symbol instead.":"No match on NSE, BSE or ASX.")+"</div>"
+}catch(e){box.innerHTML='<div class="opt mu">Search unavailable. Type the symbol instead.</div>'}},300)}
+function choose(k){pick=res[k];document.getElementById("f-n").value=pick.symbol;document.getElementById("f-m").value=pick.market;document.getElementById("sug").innerHTML=""}
 function ySym(i){var n=i.name.trim().toUpperCase();return n.indexOf(".")>-1?n:n+(i.market==="IN"?".NS":".AX")}
 async function refresh(){
 var syms=S.items.filter(function(i){return i.cat==="stock"||i.cat==="gold_etf"}).map(ySym);
@@ -161,12 +170,12 @@ try{
 var r=await fetch("/api/quotes?symbols="+encodeURIComponent(syms.join(",")));
 if(!r.ok)throw new Error(r.status);
 var d=await r.json(),bad=[];
-S.items.forEach(function(i){if(i.cat==="stock"||i.cat==="gold_etf"){var q=d.quotes[ySym(i)];if(q&&q.price>0)i.price=Math.round(q.price*100)/100;else bad.push(i.name)}});
+S.items.forEach(function(i){if(i.cat==="stock"||i.cat==="gold_etf"){var q=d.quotes[ySym(i)];if(q&&q.price>0)i.price=Math.round(q.price*100)/100;else bad.push(i.name+(d.errors&&d.errors[ySym(i)]?" ("+d.errors[ySym(i)]+")":""))}});if(!d.gold)bad.push("gold rate"+(d.errors&&d.errors.gold?" ("+d.errors.gold+")":""));
 if(d.gold){["IN","AU"].forEach(function(m){if(d.gold[m]>0)S.goldRate[m]=Math.round(d.gold[m]*(1+(S.adj[m]||0)/100)*100)/100})}
 if(d.fx>0)S.fx=Math.round(d.fx*100)/100;
 save();stat="Updated "+new Date().toLocaleTimeString()+(bad.length?". No price found for "+bad.join(", ")+".":".");
 }catch(e){stat="Live prices unavailable. Showing your last values."}
-if(!document.activeElement||document.activeElement.tagName!=="INPUT")render()}
+var ae=document.activeElement&&document.activeElement.tagName;if(ae!=="INPUT"&&ae!=="SELECT"&&ae!=="BUTTON")render()}
 render();refresh();setInterval(refresh,60000);
 </script>
 </body>
