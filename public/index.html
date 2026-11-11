@@ -54,6 +54,47 @@ td input{width:96px;text-align:right}
 h2{font-size:15px;margin:0 0 10px}
 .empty{padding:18px 0;text-align:center;color:var(--mu)}
 .sugw{position:relative}.sug{position:absolute;left:0;top:100%;z-index:5;min-width:310px;background:var(--card);border:1px solid var(--bd);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18)}.sug:empty{display:none}.opt{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--bd);padding:9px 12px;font:inherit;color:var(--tx);cursor:pointer}.opt:last-child{border:0}button.opt:hover{background:var(--bg)}
+
+html{-webkit-text-size-adjust:100%}
+.x{padding:6px 10px;border-radius:6px}
+@media(max-width:640px){
+.wrap{padding:12px 12px 88px}
+h1{font-size:18px}
+header{gap:10px}
+.seg{width:100%}.seg button{flex:1;padding:11px 0;font-size:15px}
+.bar{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.bar label{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.bar input,.bar select{width:100%}
+.bar .btn{grid-column:1/-1;width:100%}
+.bar>span{grid-column:1/-1;font-size:12px}
+.bar label:nth-of-type(2){order:1}.bar .btn{order:2}.bar>span{order:3}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;background:var(--card);border-top:1px solid var(--bd);border-bottom:0;padding:0 0 env(safe-area-inset-bottom,0px);justify-content:space-around;overflow:visible}
+.tabs button{flex:1;padding:14px 4px;border-bottom:0;border-top:3px solid transparent;font-size:14px}
+.tabs button.on{border-top-color:var(--tx)}
+input,select{font-size:16px;min-height:44px}
+.btn{min-height:44px;font-size:15px}
+.card{padding:14px}
+.big{font-size:30px}
+.stats{gap:16px 22px}
+.donut{justify-content:center}.leg{width:100%}
+.form{flex-direction:column;align-items:stretch}
+.form input,.form select,.form .btn,.form input.nm{width:100%}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu)}
+.sugw{width:100%}.sugw input{width:100%!important}.sug{min-width:0;width:100%}
+.scroll{overflow:visible}
+table.tb thead{display:none}
+table.tb,table.tb tbody{display:block}
+table.tb tr{display:block;position:relative;border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+table.tb tr:last-child td{border-bottom:0}
+table.tb td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:6px 0;text-align:right;white-space:normal}
+table.tb td::before{content:attr(data-label);color:var(--mu);font-size:13px;text-align:left}
+table.tb td:first-child{display:block;text-align:left;font-weight:600;font-size:16px;padding-right:44px}
+table.tb td:first-child::before{content:none}
+table.tb td.del{position:absolute;top:4px;right:4px;padding:0;display:block}
+table.tb td.del::before{content:none}
+.x{min-width:44px;min-height:44px;font-size:22px}
+td input{width:140px}
+}
 </style>
 </head>
 <body>
@@ -131,12 +172,12 @@ if(S.sample)h+='<div class="card note">This is sample data so you can see the la
 return h}
 function table(list,kind){
 if(!list.length)return'<div class="empty">Nothing here yet. Add your first entry below.</div>';
-var h='<div class="scroll"><table><thead><tr>';
-h+=kind==="cash"?"<th>Account</th><th>Balance</th><th></th>":"<th>"+(kind==="gold"?"Item":"Name")+"</th><th>"+(kind==="gold"?"Grams":"Qty")+"</th><th>Avg cost</th><th>"+(kind==="gold"?"Rate/g":"Price")+"</th><th>Value</th><th>Profit / loss</th><th></th>";
+var gd=kind==="gold",h='<div class="scroll"><table class="tb"><thead><tr>';
+h+=kind==="cash"?"<th>Account</th><th>Balance</th><th></th>":"<th>"+(gd?"Item":"Name")+"</th><th>"+(gd?"Grams":"Qty")+"</th><th>Avg cost</th><th>"+(gd?"Rate/g":"Price")+"</th><th>Value</th><th>Profit / loss</th><th></th>";
 h+="</tr></thead><tbody>";
-list.forEach(function(i){var c=CUR[i.market],n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"")+(i.co?'<div class="mu" style="font-size:12px;font-weight:400">'+esc(i.co)+"</div>":"");
-if(kind==="cash")h+="<tr><td>"+n+'</td><td><input type="number" min="0" value="'+i.qty+'" onchange="setField('+i.id+",'qty',this.value)\" aria-label=\"Balance\"> "+c+'</td><td><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td></tr>';
-else h+="<tr><td>"+n+"</td><td>"+i.qty+"</td><td>"+money(i.cost,c,2)+"</td><td>"+(i.cat==="gold"?money(price(i),c,2):'<input type="number" min="0" step="0.01" value="'+i.price+'" onchange="setField('+i.id+",'price',this.value)\" aria-label=\"Price\">")+"</td><td>"+money(val(i),c)+"</td><td>"+plCell(i)+'</td><td><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td></tr>'});
+list.forEach(function(i){var c=CUR[i.market],n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"")+(i.co?'<div class="mu" style="font-size:12px;font-weight:400">'+esc(i.co)+"</div>":""),x='<td class="del"><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td>';
+if(kind==="cash")h+="<tr><td>"+n+'</td><td data-label="Balance"><input type="number" min="0" value="'+i.qty+'" onchange="setField('+i.id+",'qty',this.value)\" aria-label=\"Balance\"> "+c+"</td>"+x+"</tr>";
+else h+="<tr><td>"+n+'</td><td data-label="'+(gd?"Grams":"Quantity")+'">'+i.qty+'</td><td data-label="Avg cost">'+money(i.cost,c,2)+'</td><td data-label="'+(gd?"Rate per gram":"Price")+'">'+(i.cat==="gold"?money(price(i),c,2):'<input type="number" min="0" step="0.01" value="'+i.price+'" onchange="setField('+i.id+",'price',this.value)\" aria-label=\"Price\">")+'</td><td data-label="Value">'+money(val(i),c)+'</td><td data-label="Profit / loss">'+plCell(i)+"</td>"+x+"</tr>"});
 return h+"</tbody></table></div>"}
 function stocks(){
 var L=S.items.filter(function(i){return inView(i)&&(i.cat==="stock"||i.cat==="gold_etf")});
@@ -154,7 +195,7 @@ function render(){
 var V=[["IN","India"],["AU","Australia"],["ALL","Combined"]],T=[["overview","Overview"],["stocks","Stocks"],["gold","Gold"],["cash","Cash"]];
 document.getElementById("viewSeg").innerHTML=V.map(function(v){return'<button class="'+(view===v[0]?"on":"")+'" onclick="setView(\''+v[0]+'\')">'+v[1]+"</button>"}).join("");
 document.getElementById("tabs").innerHTML=T.map(function(v){return'<button class="'+(tab===v[0]?"on":"")+'" onclick="setTab(\''+v[0]+'\')">'+v[1]+"</button>"}).join("");
-document.getElementById("bar").innerHTML='<label>1 AUD = <input type="number" min="0" step="0.01" value="'+S.fx+'" onchange="setFx(this.value)"> INR</label>'+'<button class="btn" onclick="refresh()">Refresh prices</button><span>'+esc(stat)+"</span>"+(view==="ALL"?'<label>Show combined in <select onchange="setBase(this.value)"><option'+(S.base==="INR"?" selected":"")+'>INR</option><option'+(S.base==="AUD"?" selected":"")+">AUD</option></select></label>":"");
+document.getElementById("bar").innerHTML='<label>INR per 1 AUD <input type="number" min="0" step="0.01" value="'+S.fx+'" onchange="setFx(this.value)"></label>'+'<button class="btn" onclick="refresh()">Refresh prices</button><span>'+esc(stat)+"</span>"+(view==="ALL"?'<label>Show combined in <select onchange="setBase(this.value)"><option'+(S.base==="INR"?" selected":"")+'>INR</option><option'+(S.base==="AUD"?" selected":"")+">AUD</option></select></label>":"");
 document.getElementById("main").innerHTML=tab==="overview"?overview():tab==="stocks"?stocks():tab==="gold"?gold():cash();
 document.getElementById("foot").textContent="Your holdings are saved in this browser only. Prices are from Yahoo Finance and can be delayed."}
 var pick=null,stm=null,res=[];
