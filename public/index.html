@@ -58,7 +58,7 @@ h2{font-size:15px;margin:0 0 10px}
 html{-webkit-text-size-adjust:100%}
 .x{padding:6px 10px;border-radius:6px}
 @media(max-width:640px){
-.wrap{padding:12px 12px 88px}
+.wrap{padding:12px 12px 160px}
 h1{font-size:18px}
 header{gap:10px}
 .seg{width:100%}.seg button{flex:1;padding:11px 0;font-size:15px}
@@ -68,7 +68,8 @@ header{gap:10px}
 .bar .btn{grid-column:1/-1;width:100%}
 .bar>span{grid-column:1/-1;font-size:12px}
 .bar label:nth-of-type(2){order:1}.bar .btn{order:2}.bar>span{order:3}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;background:var(--card);border-top:1px solid var(--bd);border-bottom:0;padding:0 0 env(safe-area-inset-bottom,0px);justify-content:space-around;overflow:visible}
+.tabs{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));z-index:20;margin:0;background:var(--card);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:0;justify-content:space-around;overflow:visible}
+body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:calc(56px + env(safe-area-inset-bottom,0px));background:var(--bg);z-index:19}
 .tabs button{flex:1;padding:14px 4px;border-bottom:0;border-top:3px solid transparent;font-size:14px}
 .tabs button.on{border-top-color:var(--tx)}
 input,select{font-size:16px;min-height:44px}
@@ -78,7 +79,7 @@ input,select{font-size:16px;min-height:44px}
 .stats{gap:16px 22px}
 .donut{justify-content:center}.leg{width:100%}
 .form{flex-direction:column;align-items:stretch}
-.form input,.form select,.form .btn,.form input.nm{width:100%}
+.form input,.form select,.form .btn,.form input.nm,.form input.nt{width:100%}
 .form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu)}
 .sugw{width:100%}.sugw input{width:100%!important}.sug{min-width:0;width:100%}
 .scroll{overflow:visible}
@@ -95,6 +96,10 @@ table.tb td.del::before{content:none}
 .x{min-width:44px;min-height:44px;font-size:22px}
 td input{width:140px}
 }
+.form input.nt{width:240px}
+.nb{display:block;background:none;border:0;padding:3px 0;margin:0;font:inherit;font-size:12px;font-weight:400;color:var(--mu);text-align:left;cursor:pointer;white-space:normal;max-width:260px}
+.nb:hover{color:var(--tx)}
+@media(max-width:640px){.form input.nt{width:100%}}
 </style>
 </head>
 <body>
@@ -141,6 +146,7 @@ function setFx(v){var n=parseFloat(v);if(n>0){S.fx=n;save();render()}}
 function setBase(c){S.base=c;save();render()}
 function setAdj(m,v){var n=parseFloat(v);if(!isNaN(n)){S.adj[m]=n;save();refresh()}}
 function calib(m){var v=parseFloat(document.getElementById("cal-"+m).value),sp=S.spot&&S.spot[m];if(!(v>0)||!(sp>0)){alert("Wait for live prices to load, then enter the rate you see.");return}S.adj[m]=Math.round((v/sp-1)*10000)/100;save();refresh().then(render)}
+function editNote(id){var it=S.items.filter(function(i){return i.id===id})[0];if(!it)return;var v=prompt("Note for "+it.name+" (where it came from, broker, reason)",it.note||"");if(v!==null){it.note=v.trim();save();render()}}
 function setGold(m,v){var n=parseFloat(v);if(n>=0){S.goldRate[m]=n;save();render()}}
 function setField(id,f,v){var n=parseFloat(v);if(n>=0){S.items.forEach(function(i){if(i.id===id)i[f]=n});save();render()}}
 function del(id){S.items=S.items.filter(function(i){return i.id!==id});save();render()}
@@ -150,7 +156,7 @@ var sel=(cat==="stock"&&pick&&g("f-n").trim()===pick.symbol)?pick:null,m=g("f-m"
 if(cat==="stock"||cat==="gold_etf"){cat=g("f-t");p=parseFloat(g("f-p"))||0}
 if(!name||!(q>=0)||!(c>=0)||(cat!=="gold"&&cat!=="cash"&&!(p>=0))){alert("Fill in every field with valid numbers.");return}
 if(S.sample){S.items=[];S.sample=false}
-S.items.push({id:S.next++,co:sel?sel.name:"",market:sel?sel.market:m,cat:cat,name:name,qty:q,cost:c,price:cat==="cash"?1:p});save();render();refresh()}
+S.items.push({id:S.next++,note:(document.getElementById("f-note").value||"").trim(),co:sel?sel.name:"",market:sel?sel.market:m,cat:cat,name:name,qty:q,cost:c,price:cat==="cash"?1:p});save();render();refresh()}
 function clearSample(){S.items=[];S.sample=false;save();render()}
 function mSel(){var d=view==="AU"?"AU":"IN";return'<select id="f-m"><option value="IN"'+(d==="IN"?" selected":"")+'>India</option><option value="AU"'+(d==="AU"?" selected":"")+">Australia</option></select>"}
 function donut(list){
@@ -175,22 +181,22 @@ if(!list.length)return'<div class="empty">Nothing here yet. Add your first entry
 var gd=kind==="gold",h='<div class="scroll"><table class="tb"><thead><tr>';
 h+=kind==="cash"?"<th>Account</th><th>Balance</th><th></th>":"<th>"+(gd?"Item":"Name")+"</th><th>"+(gd?"Grams":"Qty")+"</th><th>Avg cost</th><th>"+(gd?"Rate/g":"Price")+"</th><th>Value</th><th>Profit / loss</th><th></th>";
 h+="</tr></thead><tbody>";
-list.forEach(function(i){var c=CUR[i.market],n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"")+(i.co?'<div class="mu" style="font-size:12px;font-weight:400">'+esc(i.co)+"</div>":""),x='<td class="del"><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td>';
+list.forEach(function(i){var c=CUR[i.market],n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"")+(i.co?'<div class="mu" style="font-size:12px;font-weight:400">'+esc(i.co)+"</div>":"")+'<button class="nb" onclick="editNote('+i.id+')">'+(i.note?"✎ "+esc(i.note):"+ Add note")+"</button>",x='<td class="del"><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td>';
 if(kind==="cash")h+="<tr><td>"+n+'</td><td data-label="Balance"><input type="number" min="0" value="'+i.qty+'" onchange="setField('+i.id+",'qty',this.value)\" aria-label=\"Balance\"> "+c+"</td>"+x+"</tr>";
 else h+="<tr><td>"+n+'</td><td data-label="'+(gd?"Grams":"Quantity")+'">'+i.qty+'</td><td data-label="Avg cost">'+money(i.cost,c,2)+'</td><td data-label="'+(gd?"Rate per gram":"Price")+'">'+(i.cat==="gold"?money(price(i),c,2):'<input type="number" min="0" step="0.01" value="'+i.price+'" onchange="setField('+i.id+",'price',this.value)\" aria-label=\"Price\">")+'</td><td data-label="Value">'+money(val(i),c)+'</td><td data-label="Profit / loss">'+plCell(i)+"</td>"+x+"</tr>"});
 return h+"</tbody></table></div>"}
 function stocks(){
 var L=S.items.filter(function(i){return inView(i)&&(i.cat==="stock"||i.cat==="gold_etf")});
-return'<div class="card"><h2>Stocks and gold ETFs</h2>'+table(L,"stock")+'</div><div class="card"><h2>Add a holding</h2><div class="form">'+mSel()+'<select id="f-t"><option value="stock">Stock</option><option value="gold_etf">Gold ETF</option></select><div class="sugw"><input class="nm" id="f-n" placeholder="Search company or symbol" autocomplete="off" oninput="srch(this.value)" style="width:230px"><div id="sug" class="sug"></div></div><input id="f-q" type="number" min="0" placeholder="Quantity"><input id="f-c" type="number" min="0" step="0.01" placeholder="Avg buy price"><input id="f-p" type="number" min="0" step="0.01" placeholder="Price (auto-filled)"><button class="btn" onclick="addItem(\'stock\')">Add holding</button></div><p class="note">Type a company name, pick it from the list, then enter your quantity and average buy price. The current price fills in by itself and refreshes every minute.</p></div>'}
+return'<div class="card"><h2>Stocks and gold ETFs</h2>'+table(L,"stock")+'</div><div class="card"><h2>Add a holding</h2><div class="form">'+mSel()+'<select id="f-t"><option value="stock">Stock</option><option value="gold_etf">Gold ETF</option></select><div class="sugw"><input class="nm" id="f-n" placeholder="Search company or symbol" autocomplete="off" oninput="srch(this.value)" style="width:230px"><div id="sug" class="sug"></div></div><input id="f-q" type="number" min="0" placeholder="Quantity"><input id="f-c" type="number" min="0" step="0.01" placeholder="Avg buy price"><input id="f-p" type="number" min="0" step="0.01" placeholder="Price (auto-filled)"><input class="nt" id="f-note" placeholder="Note (optional), e.g. bought via Zerodha"><button class="btn" onclick="addItem(\'stock\')">Add holding</button></div><p class="note">Type a company name, pick it from the list, then enter your quantity and average buy price. The current price fills in by itself and refreshes every minute.</p></div>'}
 function gold(){
 var L=S.items.filter(function(i){return inView(i)&&i.cat==="gold"}),E=S.items.filter(function(i){return inView(i)&&i.cat==="gold_etf"});
 var h='<div class="card"><h2>Gold rate per gram</h2><div class="form"><label>India (INR) <input type="number" min="0" value="'+S.goldRate.IN+'" onchange="setGold(\'IN\',this.value)"></label><label>Australia (AUD) <input type="number" min="0" value="'+S.goldRate.AU+'" onchange="setGold(\'AU\',this.value)"></label></div><div class="form" style="margin-top:10px"><label>India adjustment % <input type="number" step="0.1" value="'+S.adj.IN+'" onchange="setAdj(\'IN\',this.value)"></label><label>Australia adjustment % <input type="number" step="0.1" value="'+S.adj.AU+'" onchange="setAdj(\'AU\',this.value)"></label></div><div class="form" style="margin-top:10px"><label>India rate you see today (INR/g) <input id="cal-IN" type="number" min="0" placeholder="e.g. 14268"></label><button class="btn" onclick="calib(\'IN\')">Match India</button></div><div class="form" style="margin-top:8px"><label>Australia rate you see today (AUD/g) <input id="cal-AU" type="number" min="0" placeholder="e.g. 260"></label><button class="btn" onclick="calib(\'AU\')">Match Australia</button></div><p class="note">The rate follows the live international gold price. Enter the rate shown by your jeweller or a site you trust and the adjustment is worked out for you, covering duty, GST and premium. Check it again now and then. International price now: \'+(S.spot&&S.spot.IN?money(S.spot.IN,"INR",2):"loading")+\' per gram (INR), \'+(S.spot&&S.spot.AU?money(S.spot.AU,"AUD",2):"loading")+\' per gram (AUD).</p></div>';
 h+='<div class="card"><h2>Physical gold</h2>'+table(L,"gold")+"</div>";
 if(E.length)h+='<div class="card"><h2>Gold ETFs</h2>'+table(E,"stock")+"</div>";
-return h+'<div class="card"><h2>Add physical gold</h2><div class="form">'+mSel()+'<input class="nm" id="f-n" placeholder="Label, e.g. Coins"><input id="f-q" type="number" min="0" placeholder="Grams"><input id="f-c" type="number" min="0" step="0.01" placeholder="Cost per gram"><button class="btn" onclick="addItem(\'gold\')">Add gold</button></div></div>'}
+return h+'<div class="card"><h2>Add physical gold</h2><div class="form">'+mSel()+'<input class="nm" id="f-n" placeholder="Label, e.g. Coins"><input id="f-q" type="number" min="0" placeholder="Grams"><input id="f-c" type="number" min="0" step="0.01" placeholder="Cost per gram"><input class="nt" id="f-note" placeholder="Note (optional), e.g. bought via Zerodha"><button class="btn" onclick="addItem(\'gold\')">Add gold</button></div></div>'}
 function cash(){
 var L=S.items.filter(function(i){return inView(i)&&i.cat==="cash"});
-return'<div class="card"><h2>Cash accounts</h2>'+table(L,"cash")+'</div><div class="card"><h2>Add a cash account</h2><div class="form">'+mSel()+'<input class="nm" id="f-n" placeholder="Account name"><input id="f-q" type="number" min="0" placeholder="Balance"><button class="btn" onclick="addItem(\'cash\')">Add account</button></div></div>'}
+return'<div class="card"><h2>Cash accounts</h2>'+table(L,"cash")+'</div><div class="card"><h2>Add a cash account</h2><div class="form">'+mSel()+'<input class="nm" id="f-n" placeholder="Account name"><input id="f-q" type="number" min="0" placeholder="Balance"><input class="nt" id="f-note" placeholder="Note (optional), e.g. bought via Zerodha"><button class="btn" onclick="addItem(\'cash\')">Add account</button></div></div>'}
 function render(){
 var V=[["IN","India"],["AU","Australia"],["ALL","Combined"]],T=[["overview","Overview"],["stocks","Stocks"],["gold","Gold"],["cash","Cash"]];
 document.getElementById("viewSeg").innerHTML=V.map(function(v){return'<button class="'+(view===v[0]?"on":"")+'" onclick="setView(\''+v[0]+'\')">'+v[1]+"</button>"}).join("");
