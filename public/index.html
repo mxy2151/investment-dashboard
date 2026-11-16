@@ -110,12 +110,19 @@ td input.nin{width:auto;flex:1 1 150px;text-align:left}
 .dlg p{margin:0 0 16px;font-size:16px}
 .dbtn{display:flex;gap:10px;justify-content:flex-end}
 @media(max-width:640px){table.tb td input.nin{width:100%;flex:1 1 100%}.btn.sm{min-height:40px}.dbtn .btn{flex:1}}
+.who{display:flex;gap:8px;align-items:center}
+.who select{min-width:160px;font-weight:600}
+.pin{width:100%;margin-bottom:14px}
+.btn.wide{width:100%}
+.dlg hr{border:0;border-top:1px solid var(--bd);margin:16px 0}
+@media(max-width:640px){.who{width:100%}.who select{flex:1}.who .btn.sm{min-height:44px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
 <h1>Investment dashboard</h1>
+<div class="who" id="who"></div>
 <div class="seg" id="viewSeg"></div>
 </header>
 <div class="bar" id="bar"></div>
@@ -134,8 +141,12 @@ function seed(){return{fx:55,base:"INR",sample:true,goldRate:{IN:15000,AU:260},n
 {id:5,market:"IN",cat:"cash",name:"Savings account",qty:250000,cost:1,price:1},
 {id:6,market:"AU",cat:"cash",name:"Everyday account",qty:8000,cost:1,price:1}]}}
 function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r)}catch(e){}return seed()}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-S=load();S.adj=S.adj||{IN:0,AU:0};var stat="Fetching live prices…",editId=null;
+function curP(){return S.people.filter(function(p){return p.id===S.cur})[0]||S.people[0]}
+function save(){try{var p=curP();if(p)p.items=S.items;var c=Object.assign({},S);delete c.items;localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}
+function boot(){if(!S.next)S.next=20;
+if(!S.people){var id=S.next++;S.people=[{id:id,name:"Me",sample:!!S.sample,items:S.items||[]}];S.cur=id;delete S.sample}
+S.items=curP().items}
+S=load();S.adj=S.adj||{IN:0,AU:0};boot();var stat="Fetching live prices…",editId=null;
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function money(x,c,d){return new Intl.NumberFormat(c==="INR"?"en-IN":"en-AU",{style:"currency",currency:c,maximumFractionDigits:d||0,minimumFractionDigits:d||0}).format(x)}
 function pct(x){return(x>=0?"+":"")+x.toFixed(1)+"%"}
@@ -165,6 +176,16 @@ function editNote(id){editId=id;render();var e=document.getElementById("ne");if(
 function saveNote(id){var e=document.getElementById("ne"),v=e?e.value.trim():"";S.items.forEach(function(i){if(i.id===id)i.note=v});editId=null;save();render()}
 function cancelNote(){editId=null;render()}
 function noteKey(e,id){if(e.key==="Enter")saveNote(id);else if(e.key==="Escape")cancelNote()}
+function dlg(html){var o=document.createElement("div");o.className="ov";o.innerHTML='<div class="dlg" role="dialog" aria-modal="true">'+html+"</div>";o.onclick=function(e){if(e.target===o)closeDlg()};document.body.appendChild(o);return o}
+function closeDlg(){var o=document.querySelector(".ov");if(o&&o.parentNode)o.parentNode.removeChild(o)}
+function pKey(e){if(e.key==="Enter"){if(e.target.id==="pn")addPerson();else renamePerson()}else if(e.key==="Escape")closeDlg()}
+function switchP(id){if(id==="__add"){render();addDlg();return}save();S.cur=+id;S.items=curP().items;editId=null;save();render()}
+function addDlg(){dlg('<p><b>Add a person</b></p><input id="pn" class="pin" maxlength="40" placeholder="Name, e.g. Mum" onkeydown="pKey(event)"><div class="dbtn"><button class="btn gh" onclick="closeDlg()">Cancel</button><button class="btn" onclick="addPerson()">Add</button></div>');document.getElementById("pn").focus()}
+function addPerson(){var n=document.getElementById("pn").value.trim();if(!n)return;save();var id=S.next++;S.people.push({id:id,name:n,items:[]});S.cur=id;S.items=curP().items;save();closeDlg();editId=null;render()}
+function manageDlg(){var p=curP();dlg('<p><b>Manage '+esc(p.name)+'</b></p><input id="pr" class="pin" maxlength="40" value="'+esc(p.name)+'" aria-label="Name" onkeydown="pKey(event)"><div class="dbtn"><button class="btn gh" onclick="closeDlg()">Cancel</button><button class="btn" onclick="renamePerson()">Save name</button></div>'+(S.people.length>1?'<hr><button class="btn dng wide" onclick="delPersonAsk()">Delete this person</button>':'<hr><p class="note" style="margin:0">Add another person to be able to delete this one.</p>'))}
+function renamePerson(){var n=document.getElementById("pr").value.trim();if(!n)return;curP().name=n;save();closeDlg();render()}
+function delPersonAsk(){var p=curP();closeDlg();dlg('<p>Delete <b>'+esc(p.name)+'</b> and their '+p.items.length+' holding'+(p.items.length===1?"":"s")+'? This can’t be undone.</p><div class="dbtn"><button class="btn gh" onclick="closeDlg()">Cancel</button><button class="btn dng" onclick="delPerson()">Delete</button></div>')}
+function delPerson(){var id=S.cur;S.people=S.people.filter(function(p){return p.id!==id});S.cur=S.people[0].id;S.items=curP().items;save();closeDlg();editId=null;render()}
 function setGold(m,v){var n=parseFloat(v);if(n>=0){S.goldRate[m]=n;save();render()}}
 function setField(id,f,v){var n=parseFloat(v);if(n>=0){S.items.forEach(function(i){if(i.id===id)i[f]=n});save();render()}}
 function del(id){var it=S.items.filter(function(i){return i.id===id})[0];if(!it)return;
@@ -181,9 +202,9 @@ function addItem(cat){
 var sel=(cat==="stock"&&pick&&g("f-n").trim()===pick.symbol)?pick:null,m=g("f-m"),name=g("f-n").trim(),q=parseFloat(g("f-q")),c=cat==="cash"?1:parseFloat(g("f-c")),p=0;
 if(cat==="stock"||cat==="gold_etf"){cat=g("f-t");p=parseFloat(g("f-p"))||0}
 if(!name||!(q>=0)||!(c>=0)||(cat!=="gold"&&cat!=="cash"&&!(p>=0))){alert("Fill in every field with valid numbers.");return}
-if(S.sample){S.items=[];S.sample=false}
+if(curP().sample){S.items=[];curP().sample=false}
 S.items.push({id:S.next++,note:(document.getElementById("f-note").value||"").trim(),co:sel?sel.name:"",market:sel?sel.market:m,cat:cat,name:name,qty:q,cost:c,price:cat==="cash"?1:p});save();render();refresh()}
-function clearSample(){S.items=[];S.sample=false;save();render()}
+function clearSample(){S.items=[];curP().sample=false;save();render()}
 function mSel(){var d=view==="AU"?"AU":"IN";return'<select id="f-m"><option value="IN"'+(d==="IN"?" selected":"")+'>India</option><option value="AU"'+(d==="AU"?" selected":"")+">Australia</option></select>"}
 function donut(list){
 var cats={Stocks:0,Gold:0,Cash:0},t=target(),tot=0;
@@ -200,7 +221,7 @@ h+='<div class="card"><div class="mu">'+(view==="ALL"?"Combined portfolio":view=
 if(view==="ALL"){var iL=S.items.filter(function(i){return i.market==="IN"}),aL=S.items.filter(function(i){return i.market==="AU"}),iv=sum(iL,val),av=sum(aL,val);
 h+='<div class="grid"><div class="card"><div class="mu">'+tag("IN")+'India</div><div class="big" style="font-size:24px">'+money(iv,t)+'</div><div class="mu" style="font-size:13px">Today '+dayHtml(dayInfo(iL,t),t)+'</div></div><div class="card"><div class="mu">'+tag("AU")+'Australia</div><div class="big" style="font-size:24px">'+money(av,t)+'</div><div class="mu" style="font-size:13px">Today '+dayHtml(dayInfo(aL,t),t)+'</div></div></div>'}
 h+='<div class="card"><h2>Allocation</h2>'+donut(L)+"</div>";
-if(S.sample)h+='<div class="card note">This is sample data so you can see the layout. <button class="btn" onclick="clearSample()">Clear sample data</button></div>';
+if(curP().sample)h+='<div class="card note">This is sample data so you can see the layout. <button class="btn" onclick="clearSample()">Clear sample data</button></div>';
 return h}
 function table(list,kind){
 if(!list.length)return'<div class="empty">Nothing here yet. Add your first entry below.</div>';
@@ -228,6 +249,7 @@ var L=S.items.filter(function(i){return inView(i)&&i.cat==="cash"});
 return'<div class="card"><h2>Cash accounts</h2>'+table(L,"cash")+'</div><div class="card"><h2>Add a cash account</h2><div class="form">'+mSel()+'<input class="nm" id="f-n" placeholder="Account name"><input id="f-q" type="number" min="0" placeholder="Balance"><input class="nt" id="f-note" placeholder="Note (optional), e.g. bought via Zerodha"><button class="btn" onclick="addItem(\'cash\')">Add account</button></div></div>'}
 function render(){
 var V=[["IN","India"],["AU","Australia"],["ALL","Combined"]],T=[["overview","Overview"],["stocks","Stocks"],["gold","Gold"],["cash","Cash"]];
+document.getElementById("who").innerHTML='<select aria-label="Person" onchange="switchP(this.value)">'+S.people.map(function(p){return'<option value="'+p.id+'"'+(p.id===S.cur?" selected":"")+">"+esc(p.name)+"</option>"}).join("")+'<option value="__add">+ Add person…</option></select><button class="btn gh sm" onclick="manageDlg()">Manage</button>';
 document.getElementById("viewSeg").innerHTML=V.map(function(v){return'<button class="'+(view===v[0]?"on":"")+'" onclick="setView(\''+v[0]+'\')">'+v[1]+"</button>"}).join("");
 document.getElementById("tabs").innerHTML=T.map(function(v){return'<button class="'+(tab===v[0]?"on":"")+'" onclick="setTab(\''+v[0]+'\')">'+v[1]+"</button>"}).join("");
 document.getElementById("bar").innerHTML='<label>INR per 1 AUD <input type="number" min="0" step="0.01" value="'+S.fx+'" onchange="setFx(this.value)"></label>'+'<button class="btn" onclick="refresh()">Refresh prices</button><span>'+esc(stat)+"</span>"+(view==="ALL"?'<label>Show combined in <select onchange="setBase(this.value)"><option'+(S.base==="INR"?" selected":"")+'>INR</option><option'+(S.base==="AUD"?" selected":"")+">AUD</option></select></label>":"");
