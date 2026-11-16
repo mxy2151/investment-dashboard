@@ -100,6 +100,16 @@ td input{width:140px}
 .nb{display:block;background:none;border:0;padding:3px 0;margin:0;font:inherit;font-size:12px;font-weight:400;color:var(--mu);text-align:left;cursor:pointer;white-space:normal;max-width:260px}
 .nb:hover{color:var(--tx)}
 @media(max-width:640px){.form input.nt{width:100%}}
+.ned{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px}
+td input.nin{width:auto;flex:1 1 150px;text-align:left}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn.gh{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+.btn.dng{background:#c0392b;color:#fff}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.dlg{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:18px;max-width:360px;width:100%}
+.dlg p{margin:0 0 16px;font-size:16px}
+.dbtn{display:flex;gap:10px;justify-content:flex-end}
+@media(max-width:640px){table.tb td input.nin{width:100%;flex:1 1 100%}.btn.sm{min-height:40px}.dbtn .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -125,7 +135,7 @@ function seed(){return{fx:55,base:"INR",sample:true,goldRate:{IN:15000,AU:260},n
 {id:6,market:"AU",cat:"cash",name:"Everyday account",qty:8000,cost:1,price:1}]}}
 function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r)}catch(e){}return seed()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-S=load();S.adj=S.adj||{IN:0,AU:0};var stat="Fetching live prices…";
+S=load();S.adj=S.adj||{IN:0,AU:0};var stat="Fetching live prices…",editId=null;
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function money(x,c,d){return new Intl.NumberFormat(c==="INR"?"en-IN":"en-AU",{style:"currency",currency:c,maximumFractionDigits:d||0,minimumFractionDigits:d||0}).format(x)}
 function pct(x){return(x>=0?"+":"")+x.toFixed(1)+"%"}
@@ -137,6 +147,11 @@ function target(){return view==="IN"?"INR":view==="AU"?"AUD":S.base}
 function inView(i){return view==="ALL"||i.market===view}
 function sum(list,fn){var t=target();return list.reduce(function(a,i){return a+conv(fn(i),CUR[i.market],t)},0)}
 function catOf(i){return i.cat==="stock"?"Stocks":i.cat==="cash"?"Cash":"Gold"}
+function prevPrice(i){return i.cat==="cash"?1:i.cat==="gold"?((S.goldPrev&&S.goldPrev[i.market])||0):(i.prev>0?i.prev:0)}
+function dayChg(i){var p=prevPrice(i);return p>0?i.qty*(price(i)-p):null}
+function dayInfo(list,t){var ch=0,base=0,n=0;list.forEach(function(i){var d=dayChg(i);if(d===null)return;n++;ch+=conv(d,CUR[i.market],t);base+=conv(i.qty*prevPrice(i),CUR[i.market],t)});return{ch:ch,pct:base>0?ch/base*100:0,n:n}}
+function dayHtml(di,t){return di.n?'<b class="'+(di.ch>=0?"up":"dn")+'">'+(di.ch>0?"+":"")+money(di.ch,t)+" ("+pct(di.pct)+")</b>":'<span class="mu">–</span>'}
+function dayCell(i){var d=dayChg(i);if(d===null)return'<span class="mu">–</span>';var p=prevPrice(i);return'<span class="'+(d>=0?"up":"dn")+'">'+(d>0?"+":"")+money(d,CUR[i.market])+" ("+pct((price(i)/p-1)*100)+")</span>"}
 function pl(i){var c=cost(i);return c?(val(i)-c)/c*100:0}
 function plCell(i){var d=val(i)-cost(i);return'<span class="'+(d>=0?"up":"dn")+'">'+money(d,CUR[i.market])+" ("+pct(pl(i))+")</span>"}
 function tag(m){return'<span class="tag '+m+'">'+(m==="IN"?"India":"AUS")+"</span>"}
@@ -146,10 +161,21 @@ function setFx(v){var n=parseFloat(v);if(n>0){S.fx=n;save();render()}}
 function setBase(c){S.base=c;save();render()}
 function setAdj(m,v){var n=parseFloat(v);if(!isNaN(n)){S.adj[m]=n;save();refresh()}}
 function calib(m){var v=parseFloat(document.getElementById("cal-"+m).value),sp=S.spot&&S.spot[m];if(!(v>0)||!(sp>0)){alert("Wait for live prices to load, then enter the rate you see.");return}S.adj[m]=Math.round((v/sp-1)*10000)/100;save();refresh().then(render)}
-function editNote(id){var it=S.items.filter(function(i){return i.id===id})[0];if(!it)return;var v=prompt("Note for "+it.name+" (where it came from, broker, reason)",it.note||"");if(v!==null){it.note=v.trim();save();render()}}
+function editNote(id){editId=id;render();var e=document.getElementById("ne");if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}}
+function saveNote(id){var e=document.getElementById("ne"),v=e?e.value.trim():"";S.items.forEach(function(i){if(i.id===id)i.note=v});editId=null;save();render()}
+function cancelNote(){editId=null;render()}
+function noteKey(e,id){if(e.key==="Enter")saveNote(id);else if(e.key==="Escape")cancelNote()}
 function setGold(m,v){var n=parseFloat(v);if(n>=0){S.goldRate[m]=n;save();render()}}
 function setField(id,f,v){var n=parseFloat(v);if(n>=0){S.items.forEach(function(i){if(i.id===id)i[f]=n});save();render()}}
-function del(id){S.items=S.items.filter(function(i){return i.id!==id});save();render()}
+function del(id){var it=S.items.filter(function(i){return i.id===id})[0];if(!it)return;
+var o=document.createElement("div");o.className="ov";
+o.innerHTML='<div class="dlg" role="alertdialog" aria-modal="true"><p>Delete <b>'+esc(it.name)+'</b>? This can’t be undone.</p><div class="dbtn"><button class="btn gh" id="dn">Cancel</button><button class="btn dng" id="dy">Delete</button></div></div>';
+function close(){if(o.parentNode)o.parentNode.removeChild(o)}
+o.onclick=function(e){if(e.target===o)close()};
+document.body.appendChild(o);
+document.getElementById("dn").onclick=close;
+document.getElementById("dy").onclick=function(){S.items=S.items.filter(function(i){return i.id!==id});save();close();render()};
+document.getElementById("dn").focus()}
 function g(id){return document.getElementById(id).value}
 function addItem(cat){
 var sel=(cat==="stock"&&pick&&g("f-n").trim()===pick.symbol)?pick:null,m=g("f-m"),name=g("f-n").trim(),q=parseFloat(g("f-q")),c=cat==="cash"?1:parseFloat(g("f-c")),p=0;
@@ -170,20 +196,23 @@ return'<div class="donut"><svg width="150" height="150" viewBox="0 0 120 120" ro
 function overview(){
 var L=S.items.filter(inView),t=target(),v=sum(L,val),c=sum(L.filter(function(i){return i.cat!=="cash"}),cost),
 nv=sum(L.filter(function(i){return i.cat!=="cash"}),val),d=nv-c,h='';
-h+='<div class="card"><div class="mu">'+(view==="ALL"?"Combined portfolio":view==="IN"?"India portfolio":"Australia portfolio")+" value</div><div class=\"big\">"+money(v,t)+'</div><div class="stats"><div><span>Invested (excl. cash)</span>'+money(c,t)+'</div><div><span>Profit / loss</span><b class="'+(d>=0?"up":"dn")+'">'+money(d,t)+" ("+pct(c?d/c*100:0)+')</b></div><div><span>Holdings</span>'+L.length+"</div></div></div>";
-if(view==="ALL"){var iv=sum(S.items.filter(function(i){return i.market==="IN"}),val),av=sum(S.items.filter(function(i){return i.market==="AU"}),val);
-h+='<div class="grid"><div class="card"><div class="mu">'+tag("IN")+'India</div><div class="big" style="font-size:24px">'+money(iv,t)+'</div></div><div class="card"><div class="mu">'+tag("AU")+'Australia</div><div class="big" style="font-size:24px">'+money(av,t)+"</div></div></div>"}
+h+='<div class="card"><div class="mu">'+(view==="ALL"?"Combined portfolio":view==="IN"?"India portfolio":"Australia portfolio")+" value</div><div class=\"big\">"+money(v,t)+'</div><div class="stats"><div><span>Today</span>'+dayHtml(dayInfo(L,t),t)+'</div><div><span>Invested (excl. cash)</span>'+money(c,t)+'</div><div><span>Profit / loss</span><b class="'+(d>=0?"up":"dn")+'">'+money(d,t)+" ("+pct(c?d/c*100:0)+')</b></div><div><span>Holdings</span>'+L.length+"</div></div></div>";
+if(view==="ALL"){var iL=S.items.filter(function(i){return i.market==="IN"}),aL=S.items.filter(function(i){return i.market==="AU"}),iv=sum(iL,val),av=sum(aL,val);
+h+='<div class="grid"><div class="card"><div class="mu">'+tag("IN")+'India</div><div class="big" style="font-size:24px">'+money(iv,t)+'</div><div class="mu" style="font-size:13px">Today '+dayHtml(dayInfo(iL,t),t)+'</div></div><div class="card"><div class="mu">'+tag("AU")+'Australia</div><div class="big" style="font-size:24px">'+money(av,t)+'</div><div class="mu" style="font-size:13px">Today '+dayHtml(dayInfo(aL,t),t)+'</div></div></div>'}
 h+='<div class="card"><h2>Allocation</h2>'+donut(L)+"</div>";
 if(S.sample)h+='<div class="card note">This is sample data so you can see the layout. <button class="btn" onclick="clearSample()">Clear sample data</button></div>';
 return h}
 function table(list,kind){
 if(!list.length)return'<div class="empty">Nothing here yet. Add your first entry below.</div>';
 var gd=kind==="gold",h='<div class="scroll"><table class="tb"><thead><tr>';
-h+=kind==="cash"?"<th>Account</th><th>Balance</th><th></th>":"<th>"+(gd?"Item":"Name")+"</th><th>"+(gd?"Grams":"Qty")+"</th><th>Avg cost</th><th>"+(gd?"Rate/g":"Price")+"</th><th>Value</th><th>Profit / loss</th><th></th>";
+h+=kind==="cash"?"<th>Account</th><th>Balance</th><th></th>":"<th>"+(gd?"Item":"Name")+"</th><th>"+(gd?"Grams":"Qty")+"</th><th>Avg cost</th><th>"+(gd?"Rate/g":"Price")+"</th><th>Value</th><th>Today</th><th>Profit / loss</th><th></th>";
 h+="</tr></thead><tbody>";
-list.forEach(function(i){var c=CUR[i.market],n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"")+(i.co?'<div class="mu" style="font-size:12px;font-weight:400">'+esc(i.co)+"</div>":"")+'<button class="nb" onclick="editNote('+i.id+')">'+(i.note?"✎ "+esc(i.note):"+ Add note")+"</button>",x='<td class="del"><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td>';
+list.forEach(function(i){var c=CUR[i.market],
+nt=editId===i.id?'<div class="ned"><input id="ne" class="nin" maxlength="200" value="'+esc(i.note||"")+'" placeholder="Note" onkeydown="noteKey(event,'+i.id+')"><button class="btn sm" onclick="saveNote('+i.id+')">Save</button><button class="btn sm gh" onclick="cancelNote()">Cancel</button></div>':'<button class="nb" onclick="editNote('+i.id+')">'+(i.note?"✎ "+esc(i.note):"+ Add note")+"</button>",
+n=esc(i.name)+(view==="ALL"?tag(i.market):"")+(i.cat==="gold_etf"?'<span class="mu"> (gold ETF)</span>':"")+(i.co?'<div class="mu" style="font-size:12px;font-weight:400">'+esc(i.co)+"</div>":"")+nt,
+x='<td class="del"><button class="x" onclick="del('+i.id+')" aria-label="Delete">×</button></td>';
 if(kind==="cash")h+="<tr><td>"+n+'</td><td data-label="Balance"><input type="number" min="0" value="'+i.qty+'" onchange="setField('+i.id+",'qty',this.value)\" aria-label=\"Balance\"> "+c+"</td>"+x+"</tr>";
-else h+="<tr><td>"+n+'</td><td data-label="'+(gd?"Grams":"Quantity")+'">'+i.qty+'</td><td data-label="Avg cost">'+money(i.cost,c,2)+'</td><td data-label="'+(gd?"Rate per gram":"Price")+'">'+(i.cat==="gold"?money(price(i),c,2):'<input type="number" min="0" step="0.01" value="'+i.price+'" onchange="setField('+i.id+",'price',this.value)\" aria-label=\"Price\">")+'</td><td data-label="Value">'+money(val(i),c)+'</td><td data-label="Profit / loss">'+plCell(i)+"</td>"+x+"</tr>"});
+else h+="<tr><td>"+n+'</td><td data-label="'+(gd?"Grams":"Quantity")+'">'+i.qty+'</td><td data-label="Avg cost">'+money(i.cost,c,2)+'</td><td data-label="'+(gd?"Rate per gram":"Price")+'">'+(i.cat==="gold"?money(price(i),c,2):'<input type="number" min="0" step="0.01" value="'+i.price+'" onchange="setField('+i.id+",'price',this.value)\" aria-label=\"Price\">")+'</td><td data-label="Value">'+money(val(i),c)+'</td><td data-label="Today">'+dayCell(i)+'</td><td data-label="Profit / loss">'+plCell(i)+"</td>"+x+"</tr>"});
 return h+"</tbody></table></div>"}
 function stocks(){
 var L=S.items.filter(function(i){return inView(i)&&(i.cat==="stock"||i.cat==="gold_etf")});
@@ -203,7 +232,7 @@ document.getElementById("viewSeg").innerHTML=V.map(function(v){return'<button cl
 document.getElementById("tabs").innerHTML=T.map(function(v){return'<button class="'+(tab===v[0]?"on":"")+'" onclick="setTab(\''+v[0]+'\')">'+v[1]+"</button>"}).join("");
 document.getElementById("bar").innerHTML='<label>INR per 1 AUD <input type="number" min="0" step="0.01" value="'+S.fx+'" onchange="setFx(this.value)"></label>'+'<button class="btn" onclick="refresh()">Refresh prices</button><span>'+esc(stat)+"</span>"+(view==="ALL"?'<label>Show combined in <select onchange="setBase(this.value)"><option'+(S.base==="INR"?" selected":"")+'>INR</option><option'+(S.base==="AUD"?" selected":"")+">AUD</option></select></label>":"");
 document.getElementById("main").innerHTML=tab==="overview"?overview():tab==="stocks"?stocks():tab==="gold"?gold():cash();
-document.getElementById("foot").textContent="Your holdings are saved in this browser only. Prices are from Yahoo Finance and can be delayed."}
+document.getElementById("foot").textContent="Your holdings are saved in this browser only. Prices are from Yahoo Finance and can be delayed. Today’s change compares with the previous close, so outside trading hours it shows the last session."}
 var pick=null,stm=null,res=[];
 function srch(v){pick=null;clearTimeout(stm);var box=document.getElementById("sug");
 if(v.trim().length<2){box.innerHTML="";return}
@@ -219,12 +248,12 @@ try{
 var r=await fetch("/api/quotes?symbols="+encodeURIComponent(syms.join(",")));
 if(!r.ok)throw new Error(r.status);
 var d=await r.json(),bad=[];
-S.items.forEach(function(i){if(i.cat==="stock"||i.cat==="gold_etf"){var q=d.quotes[ySym(i)];if(q&&q.price>0)i.price=Math.round(q.price*100)/100;else bad.push(i.name+(d.errors&&d.errors[ySym(i)]?" ("+d.errors[ySym(i)]+")":""))}});if(!d.gold)bad.push("gold rate"+(d.errors&&d.errors.gold?" ("+d.errors.gold+")":""));
-if(d.gold){S.spot=S.spot||{};["IN","AU"].forEach(function(m){if(d.gold[m]>0)S.spot[m]=d.gold[m];if(d.gold[m]>0)S.goldRate[m]=Math.round(d.gold[m]*(1+(S.adj[m]||0)/100)*100)/100})}
+S.items.forEach(function(i){if(i.cat==="stock"||i.cat==="gold_etf"){var q=d.quotes[ySym(i)];if(q&&q.price>0){i.price=Math.round(q.price*100)/100;if(q.prev>0)i.prev=q.prev}else bad.push(i.name+(d.errors&&d.errors[ySym(i)]?" ("+d.errors[ySym(i)]+")":""))}});if(!d.gold)bad.push("gold rate"+(d.errors&&d.errors.gold?" ("+d.errors.gold+")":""));
+if(d.gold){S.spot=S.spot||{};["IN","AU"].forEach(function(m){if(d.gold[m]>0)S.spot[m]=d.gold[m];if(d.gold[m]>0)S.goldRate[m]=Math.round(d.gold[m]*(1+(S.adj[m]||0)/100)*100)/100;if(d.goldPrev&&d.goldPrev[m]>0){S.goldPrev=S.goldPrev||{};S.goldPrev[m]=Math.round(d.goldPrev[m]*(1+(S.adj[m]||0)/100)*100)/100}})}
 if(d.fx>0)S.fx=Math.round(d.fx*100)/100;
 save();stat="Updated "+new Date().toLocaleTimeString()+(bad.length?". No price found for "+bad.join(", ")+".":".");
 }catch(e){stat="Live prices unavailable. Showing your last values."}
-var ae=document.activeElement&&document.activeElement.tagName;if(ae!=="INPUT"&&ae!=="SELECT"&&ae!=="BUTTON")render()}
+var ae=document.activeElement&&document.activeElement.tagName;if(ae!=="INPUT"&&ae!=="SELECT"&&ae!=="BUTTON"&&editId===null)render()}
 render();refresh();setInterval(refresh,60000);
 </script>
 </body>
