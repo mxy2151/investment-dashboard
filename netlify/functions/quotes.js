@@ -21,7 +21,11 @@ async function quote(sym) {
       const j = await r.json();
       const m = j.chart && j.chart.result && j.chart.result[0] && j.chart.result[0].meta;
       if (!m || !(m.regularMarketPrice > 0)) { last = "symbol not found"; continue; }
-      const v = { price: m.regularMarketPrice, prev: m.chartPreviousClose, currency: m.currency, time: m.regularMarketTime };
+      const qd = j.chart.result[0].indicators && j.chart.result[0].indicators.quote && j.chart.result[0].indicators.quote[0];
+      const cl = ((qd && qd.close) || []).filter(x => x > 0);
+      // second-last daily close is the previous session; fall back to the range start
+      const prev = cl.length >= 2 ? cl[cl.length - 2] : m.chartPreviousClose;
+      const v = { price: m.regularMarketPrice, prev, currency: m.currency, time: m.regularMarketTime };
       cache.set(sym, { t: Date.now(), v });
       return { v };
     } catch (e) {
@@ -43,10 +47,12 @@ exports.handler = async (event) => {
     if (r.v) quotes[s] = r.v; else errors[s] = r.e;
   });
   const OZ = 31.1035; // grams per troy ounce
-  const out = { quotes, errors, gold: null, fx: null, time: Date.now() };
+  const out = { quotes, errors, gold: null, goldPrev: null, fx: null, time: Date.now() };
   // INR=X is INR per USD, AUD=X is AUD per USD, GC=F is USD per troy ounce
   if (gold && inrUsd) out.gold = { IN: gold.price * inrUsd.price / OZ };
   if (gold && audUsd) out.gold = Object.assign(out.gold || {}, { AU: gold.price * audUsd.price / OZ });
+  if (gold && inrUsd) out.goldPrev = { IN: gold.prev * inrUsd.prev / OZ };
+  if (gold && audUsd) out.goldPrev = Object.assign(out.goldPrev || {}, { AU: gold.prev * audUsd.prev / OZ });
   if (inrUsd && audUsd) out.fx = inrUsd.price / audUsd.price;
   if (!gold) errors["gold"] = res[0].e;
   return {
